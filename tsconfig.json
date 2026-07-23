@@ -14,17 +14,9 @@
     "target": "ES2023",
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDirs": ["src"],
     "paths": {
-      "@configs": ["./src/configs"],
-      "@decorators": ["./src/decorators"],
-      "@filters": ["./src/filters"],
-      "@guards": ["./src/guards"],
-      "@interceptors": ["./src/interceptors"],
-      "@middleware": ["./src/middleware"],
-      "@modules": ["./src/modules"],
-      "@pipes": ["./src/pipes"],
-      "@providers": ["./src/providers"]
+      "@/*": ["./src/*"]
     },
     "incremental": true,
     "skipLibCheck": true,

@@ -9,7 +9,10 @@ datasource db {
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  email String  @unique
-  name  String?
+  id         Int      @id @default(autoincrement())
+  telegramId Int      @unique 
+  first_name String?  @map("firstName")
+  last_name  String?  @map("lasttName")
+  username   String? 
+  photo_url  String? 
 }
