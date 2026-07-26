@@ -14,4 +14,8 @@ export default () => ({
     autoLoadModels: true,
     synchronize: true,
   },
+
+  jwtSecret: process.env.JWT_SECRET,
+  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN ?? "null",
 });

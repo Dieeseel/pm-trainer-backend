@@ -1,12 +1,9 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, IsUrl } from "class-validator";
 
 export class CreateUserDto {
-  @IsNumber(
-    { allowNaN: false, allowInfinity: false },
-    { message: "Ошибка валидации: telegramId должен быть в виде числа" }
-  )
+  @IsString({ message: "Ошибка валидации: telegramId должен быть в виде строки" })
   @IsNotEmpty()
-  telegramId!: number;
+  telegramId!: string;
 
   @IsString()
   @IsOptional()
