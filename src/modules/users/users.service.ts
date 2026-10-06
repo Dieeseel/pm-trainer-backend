@@ -1,27 +1,17 @@
 import { Injectable } from "@nestjs/common";
-import { PrismaService } from "@/prisma/prisma.service";
+
 import { Prisma } from "@/generated/prisma/client";
+import { PrismaService } from "@/modules/prisma/prisma.service";
 
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async findOne(telegramId: Prisma.UserWhereUniqueInput) {
-    try {
-      return await this.prisma.user.findUnique({
-        where: telegramId,
-      });
-    } catch (error) {
-      throw new Error("Ошибка запроса поиска пользователя", { cause: error });
-    }
+  async create(user: Prisma.UserCreateInput) {
+    return await this.prisma.user.create({ data: user });
   }
 
-  async create(user: Prisma.UserCreateInput) {
-    try {
-      const data = await this.prisma.user.create({ data: user });
-      return data;
-    } catch (error) {
-      throw new Error("", { cause: error });
-    }
+  async findById(telegramId: string) {
+    return await this.prisma.user.findUnique({ where: { telegramId } });
   }
 }

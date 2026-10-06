@@ -1,84 +1,68 @@
-import {
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-} from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
-import { InitData } from "@tma.js/init-data-node";
-import { UsersService } from "../users/users.service";
-import { IJwtPayload } from "./interfaces/jwt-payload.interface";
-import { Response } from "express";
+import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { parse, validate } from "@tma.js/init-data-node";
+
+import { UsersService } from "../users/users.service";
+import { IUserData } from "./interfaces/user.data.interface";
+
+import { errorMessages } from "@/common/constants/error-messages";
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
-    private readonly jwtService: JwtService
+    private configService: ConfigService,
+    private usersService: UsersService
   ) {}
 
-  private async generateTokens(payload: IJwtPayload) {
-    const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>("jwtSecret"),
-        expiresIn: "15m",
-      }),
-      this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>("jwtRefreshSecret"),
-        expiresIn: "7d",
-      }),
-    ]);
-    return { accessToken, refreshToken };
+  async init(token: string | undefined) {
+    const authData = this.validateData(token);
+    const userData = this.extractUserData(authData);
+    const user = await this.usersService.findById(userData.telegramId);
+
+    if (!user) await this.usersService.create(userData);
+
+    return { isNewUser: !user };
   }
 
-  private setRefreshTokenCookie(res: Response, token: string) {
-    res.cookie("tg_refresh_token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-  }
+  private validateData(token: string | undefined) {
+    if (!token) {
+      throw new UnauthorizedException(errorMessages.TELEGRAM.INIT_DATA_NOT_PROVIDED);
+    }
 
-  async auth(
-    userData: InitData,
-    response: Response
-  ): Promise<{
-    accessToken: string;
-    isNewUser: boolean;
-  }> {
+    const [authType, authData = ""] = token.split(" ");
+
+    if (authType !== "tma") {
+      throw new ForbiddenException(errorMessages.TELEGRAM.INVALID_AUTH_HEADERS);
+    }
+
     try {
-      if (!userData.user) {
-        throw new BadRequestException("Не найдены данные пользователя");
-      }
-
-      const tgUserData = {
-        telegramId: String(userData.user.id),
-        firstName: userData.user?.first_name,
-        lastName: userData.user?.last_name,
-        username: userData.user?.username,
-        photoUrl: userData.user?.photo_url,
-      };
-
-      let user = await this.usersService.findOne({ telegramId: tgUserData.telegramId });
-      let isNewUser = false;
-
-      if (!user) {
-        user = await this.usersService.create(tgUserData);
-        isNewUser = true;
-      }
-
-      const tokens = await this.generateTokens({
-        sub: user.id,
-        telegramId: user.telegramId,
-        username: user.username,
-      });
-
-      this.setRefreshTokenCookie(response, tokens.refreshToken);
-      return { accessToken: tokens.accessToken, isNewUser };
+      validate(authData, this.configService.getOrThrow<string>("BOT_TOKEN"));
     } catch (error) {
-      throw new InternalServerErrorException(error);
+      throw new ForbiddenException(errorMessages.TELEGRAM.INVALID_INIT_DATA, {
+        cause: error,
+      });
+    }
+
+    return authData;
+  }
+
+  private extractUserData(authData: string): IUserData {
+    try {
+      const userData = parse(authData).user;
+
+      if (!userData) throw new Error();
+
+      return {
+        telegramId: String(userData.id),
+        firstName: userData.first_name,
+        lastName: userData.last_name,
+        photoUrl: userData.photo_url,
+        username: userData.username,
+      };
+    } catch (error) {
+      throw new ForbiddenException(errorMessages.TELEGRAM.INVALID_INIT_DATA, {
+        cause: error,
+      });
     }
   }
 }
