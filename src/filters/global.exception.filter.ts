@@ -1,11 +1,4 @@
-import {
-  ExceptionFilter,
-  Catch,
-  ArgumentsHost,
-  HttpException,
-  HttpStatus,
-  BadRequestException,
-} from "@nestjs/common";
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from "@nestjs/common";
 import { AbstractHttpAdapter } from "@nestjs/core";
 
 @Catch()
@@ -26,18 +19,27 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       message: message,
       success: false,
       timestamp: new Date().toISOString(),
+      error: this.extractErrorDetails(exception),
     };
 
-    if (exception instanceof BadRequestException) {
+    this.httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
+  }
+
+  private extractErrorDetails(exception: unknown): string | string[] | undefined {
+    if (exception instanceof HttpException) {
       const response = exception.getResponse();
 
       if (typeof response === "object" && "message" in response) {
-        Object.assign(responseBody, {
-          error: response.message,
-        });
+        const message = response.message;
+
+        if (Array.isArray(message)) {
+          return message as string[];
+        } else {
+          return "cause" in exception && typeof exception.cause === "string"
+            ? exception.cause.replace(/[\\"]/g, "").replace(/\s+/g, " ").trim()
+            : String(response.message);
+        }
       }
     }
-
-    this.httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
   }
 }

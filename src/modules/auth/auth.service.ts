@@ -6,6 +6,7 @@ import { UsersService } from "../users/users.service";
 import { IUserData } from "./interfaces/user.data.interface";
 
 import { errorMessages } from "@/common/constants/error-messages";
+import { getErrorMessage } from "@/common/helpers/getErrorMessage";
 
 @Injectable()
 export class AuthService {
@@ -37,9 +38,9 @@ export class AuthService {
 
     try {
       validate(authData, this.configService.getOrThrow<string>("BOT_TOKEN"));
-    } catch (error) {
+    } catch (error: unknown) {
       throw new ForbiddenException(errorMessages.TELEGRAM.INVALID_INIT_DATA, {
-        cause: error,
+        cause: getErrorMessage(error),
       });
     }
 
@@ -61,7 +62,7 @@ export class AuthService {
       };
     } catch (error) {
       throw new ForbiddenException(errorMessages.TELEGRAM.INVALID_INIT_DATA, {
-        cause: error,
+        cause: getErrorMessage(error),
       });
     }
   }
