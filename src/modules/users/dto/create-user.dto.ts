@@ -6,8 +6,8 @@ export class CreateUserDto {
   telegramId!: string;
 
   @IsString()
-  @IsOptional()
-  firstName?: string;
+  @IsNotEmpty()
+  firstName!: string;
 
   @IsString()
   @IsOptional()

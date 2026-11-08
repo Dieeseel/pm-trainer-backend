@@ -11,7 +11,7 @@ export class UsersService {
     return await this.prisma.user.create({ data: user });
   }
 
-  async findById(telegramId: string) {
-    return await this.prisma.user.findUnique({ where: { telegramId } });
+  async findById(telegramId: string | number) {
+    return await this.prisma.user.findUnique({ where: { telegramId: String(telegramId) } });
   }
 }

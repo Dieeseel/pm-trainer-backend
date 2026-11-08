@@ -1,7 +1,7 @@
-export interface IUserData {
+export interface IUser {
   telegramId: string;
   firstName: string;
-  lastName?: string;
-  photoUrl?: string;
-  username?: string;
+  lastName: string | null;
+  photoUrl: string | null;
+  username: string | null;
 }

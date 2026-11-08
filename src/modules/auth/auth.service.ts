@@ -1,9 +1,10 @@
+import { TokenService } from "@nestjs/authentication";
 import { ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { parse, validate } from "@tma.js/init-data-node";
 
 import { UsersService } from "../users/users.service";
-import { IUserData } from "./interfaces/user.data.interface";
+import { IUser } from "./interfaces/user.data.interface";
 
 import { errorMessages } from "@/common/constants/error-messages";
 import { getErrorMessage } from "@/common/helpers/getErrorMessage";
@@ -12,17 +13,20 @@ import { getErrorMessage } from "@/common/helpers/getErrorMessage";
 export class AuthService {
   constructor(
     private configService: ConfigService,
-    private usersService: UsersService
+    private usersService: UsersService,
+    private tokenService: TokenService
   ) {}
 
-  async init(token: string | undefined) {
+  async auth(token: string | undefined) {
     const authData = this.validateData(token);
     const userData = this.extractUserData(authData);
     const user = await this.usersService.findById(userData.telegramId);
 
     if (!user) await this.usersService.create(userData);
 
-    return { isNewUser: !user };
+    const { accessToken, refreshToken } = await this.tokenService.issue(String(user?.telegramId));
+
+    return { isNewUser: !user, accessToken, refreshToken };
   }
 
   private validateData(token: string | undefined) {
@@ -47,7 +51,7 @@ export class AuthService {
     return authData;
   }
 
-  private extractUserData(authData: string): IUserData {
+  private extractUserData(authData: string): IUser {
     try {
       const userData = parse(authData).user;
 
@@ -56,9 +60,9 @@ export class AuthService {
       return {
         telegramId: String(userData.id),
         firstName: userData.first_name,
-        lastName: userData.last_name,
-        photoUrl: userData.photo_url,
-        username: userData.username,
+        lastName: userData.last_name ?? null,
+        photoUrl: userData.photo_url ?? null,
+        username: userData.username ?? null,
       };
     } catch (error) {
       throw new ForbiddenException(errorMessages.TELEGRAM.INVALID_INIT_DATA, {

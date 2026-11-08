@@ -11,7 +11,7 @@ datasource db {
 model User {
   id         Int      @id @default(autoincrement())
   telegramId String   @unique @map("telegram_id")
-  firstName  String?  @map("first_name")
+  firstName  String  @map("first_name")
   lastName   String?  @map("last_name")
   username   String? 
   photoUrl   String?  @map("photo_url")  

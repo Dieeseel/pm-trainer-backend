@@ -1,3 +1,6 @@
+// TODO: Исправить вывод ошибок
+import { STATUS_CODES } from "http";
+
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from "@nestjs/common";
 import { AbstractHttpAdapter } from "@nestjs/core";
 
@@ -7,39 +10,35 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
+    const response = exception instanceof HttpException ? exception.getResponse() : null;
 
     const httpStatus =
       exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
 
     const message =
-      exception instanceof HttpException ? exception.message : "Internal Server Error";
+      response && typeof response === "object" && "message" in response
+        ? response.message
+        : "Internal Server Error";
+
+    const error =
+      response && typeof response === "object" && "error" in response
+        ? (response.error as string)
+        : STATUS_CODES[httpStatus];
+
+    const errorCode =
+      response && typeof response === "object" && "errorCode" in response
+        ? (response.errorCode as string)
+        : null;
 
     const responseBody = {
       statusCode: httpStatus,
+      ...(error && { error }),
+      ...(errorCode && { errorCode }),
       message: message,
       success: false,
       timestamp: new Date().toISOString(),
-      error: this.extractErrorDetails(exception),
     };
 
     this.httpAdapter.reply(ctx.getResponse(), responseBody, httpStatus);
-  }
-
-  private extractErrorDetails(exception: unknown): string | string[] | undefined {
-    if (exception instanceof HttpException) {
-      const response = exception.getResponse();
-
-      if (typeof response === "object" && "message" in response) {
-        const message = response.message;
-
-        if (Array.isArray(message)) {
-          return message as string[];
-        } else {
-          return "cause" in exception && typeof exception.cause === "string"
-            ? exception.cause.replace(/[\\"]/g, "").replace(/\s+/g, " ").trim()
-            : String(response.message);
-        }
-      }
-    }
   }
 }

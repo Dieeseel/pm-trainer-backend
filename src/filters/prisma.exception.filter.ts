@@ -1,3 +1,5 @@
+import { STATUS_CODES } from "http";
+
 import { ArgumentsHost, Catch, type HttpServer, HttpStatus } from "@nestjs/common";
 import { BaseExceptionFilter } from "@nestjs/core";
 
@@ -13,7 +15,6 @@ export class PrismaClientExceptionFilter extends BaseExceptionFilter {
 
   catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost) {
     const { meta } = exception;
-
     const target = meta?.modelName as string;
     const column = meta?.column_name as string;
 
@@ -78,9 +79,11 @@ export class PrismaClientExceptionFilter extends BaseExceptionFilter {
 
   private replyResponse(host: ArgumentsHost, httpStatus: HttpStatus, message: string) {
     const ctx = host.switchToHttp();
+    const error = STATUS_CODES[httpStatus] ?? "Unknown Error";
 
     const responseBody = {
       statusCode: httpStatus,
+      error,
       message: message,
       timestamp: new Date().toISOString(),
       success: false,
